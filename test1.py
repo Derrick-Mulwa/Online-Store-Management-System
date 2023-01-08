@@ -1,4 +1,21 @@
-me("ALTER TABLE orders ADD CONSTRAINT fk_customer_username "
-   "FOREIGN KEY (customer_username) REFERENCES customers(customer_username)"
-   "ON DELETE SET NULL "
-   "ON UPDATE CASCADE")
+import mysql.connector
+
+
+
+try:
+    db = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="Firefly."
+    )
+
+    mycursor = db.cursor()
+    mycursor.execute("USE retail_store;")
+
+except:
+    print("Error connecting to database!")
+
+
+
+
+
