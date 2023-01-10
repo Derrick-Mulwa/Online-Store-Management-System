@@ -16,7 +16,7 @@ try:
 except:
     print("Error connecting to database!")
 
-user_details = ("abu1121", "Abu", "Boubakar", "Male", "1990-09-22", 25479938479, "mymail@yahoo.dob", "Kiambu, Kenya", 0)
-mycursor.execute("USE retail_store;")
-mycursor.execute(f"INSERT INTO retail_store.customers VALUES {user_details};")
-db.commit()
+
+
+
+

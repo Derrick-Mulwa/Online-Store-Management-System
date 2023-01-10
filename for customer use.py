@@ -1,6 +1,7 @@
 import mysql.connector
 import smtplib
 import random
+import main
 
 # Connect to database
 try:

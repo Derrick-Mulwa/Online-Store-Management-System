@@ -3,6 +3,7 @@ import smtplib
 import random
 from datetime import datetime
 
+# Try to connect to the database
 try:
     db = mysql.connector.connect(
         host="localhost",
@@ -19,7 +20,6 @@ except:
 
 # The function create_database_and_tables below creates the store's database and appropriate tables that will store the
 # stores customers', products', payments'', employees'' and shipping information
-
 
 def create_database_and_tables():
     # Create database
@@ -167,6 +167,12 @@ def create_database_and_tables():
        "action_taken VARCHAR(200),"
        "description VARCHAR(500))")
 
+# Remainder table for security.py
+    me("CREATE TABLE last_action_acted("
+       "acting_id INT PRIMARY KEY AUTO_INCREMENT,"
+       "last_action_id INT);")
+    me("INSERT INTO last_action_acted(last_action_id) VALUES (1)")
+
     # UPDATE ALL FOREIGN KEYS USED TO LINK ALL TABLES
     # FOREIGN KEYS FOR THE ORDERS TABLE
     me("ALTER TABLE orders ADD CONSTRAINT fk_customer_username "
@@ -241,7 +247,8 @@ def create_database_and_tables():
        "FOREIGN KEY (company_payment_method_id) REFERENCES company_payment_methods(payment_method_id)"
        " ON DELETE SET NULL ON UPDATE CASCADE;")
 
-
+# A function to reset users email in case of suspicious login activity by resetting password and sending it to
+# user's email address'
 def reset_customer_password(username):
     mycursor = db.cursor(())
     # Generate a new random password of 8 characters
@@ -285,6 +292,12 @@ def reset_customer_password(username):
         to_addrs=receivers_email,
         msg=message
     )
+    action = "password_reset"
+    reset_time = datetime.now()
+    sql_statement = f"INSERT INTO retail_store.actions_recorder (action_taken, description) " \
+                    f"VALUES ('{action}', '({username}, {reset_time})') "
+    mycursor.execute(sql_statement)
+    db.commit()
 
 
 def create_new_customer_account():
@@ -292,6 +305,8 @@ def create_new_customer_account():
     print("Welcome to Firefly online store! \n"
           "Enter your credentials correctly to create your account. Starred* fields should not be blank!\n")
 
+# Get existing usernames, phone number and email address to avoid duplication of usernames and ensure a customer has only
+# one account
     mycursor.execute("USE retail_store;")
     mycursor.execute(f"SELECT customer_username, phone_number, email_address FROM retail_store.customers")
     data = [i for i in mycursor]
@@ -299,6 +314,7 @@ def create_new_customer_account():
     existing_phone_numbers = [i[1] for i in data]
     existing_email_address = [i[2] for i in data]
 
+# Get customers First and last names
     customer_first_name = input("Enter your first name: ")
     while len(customer_first_name) > 100:
         customer_first_name = input("Your first name is too long. Please shorten it. Re-enter your first name: ")
@@ -307,12 +323,14 @@ def create_new_customer_account():
     while len(customer_last_name) > 100:
         customer_last_name = input("Your last name is too long. Please shorten it. Re-enter your first name: ")
 
+# Get unique customer's username that is not already registered'
     customer_username = input("Enter your username. This will be your unique identifier. "
                               "You can combine letters and numbers: ").lower()
 
     while len(customer_username) > 100 or customer_username in existing_usernames:
         customer_username = input("The username is either taken or is too long. Enter another : ")
 
+# Get a secure password for the customer's account'
     verify_password = False
     while verify_password is False:
         customer_password = input("Enter password. "
@@ -335,6 +353,7 @@ def create_new_customer_account():
         else:
             print("\nPasswords Do not match. Enter passwords again.")
 
+# Get customers Gender
     customer_gender = input("Enter your gender(Enter M for male and F for female):").upper()
     while customer_gender not in ["M", "F"]:
         customer_gender = input("Incorrect input! Re-enter your gender(Enter M for male and F for female):").upper()
@@ -343,6 +362,7 @@ def create_new_customer_account():
     else:
         customer_gender = "Female"
 
+# Get the customers Date of Birt and ensure it is a valid date
     customer_date_of_birth = input("Enter your date of birth(YYYY-MM-DD): ")
     valid_date = False
     while valid_date is False:
@@ -352,6 +372,7 @@ def create_new_customer_account():
         except:
             customer_date_of_birth = input("Incorrect date format. Include(-). Enter your date of birth(YYYY-MM-DD): ")
 
+    # Get a legit phone number with country code
     customer_phone_number = input("Enter your phone number, including country code (eg: 254712345678): ")
     valid_phone_number = False
     while valid_phone_number is False:
@@ -370,6 +391,7 @@ def create_new_customer_account():
             customer_phone_number = input("Phone number is already linked to an account! \nEnter another phone number, "
                                           "including country code (eg: 254712345678): ")
 
+    # Get a legitimate email from the customer. The email is verified by sending a OTP to the email and confirming it
     customer_email_address = input("Enter your email address: ").lower()
     verified_email_address = False
     while verified_email_address is False:
@@ -431,6 +453,7 @@ def create_new_customer_account():
     home_address = input("Enter your address (county/state, Country): ")
     loyalty_points = 1
 
+    # Insert customers credentials to customers table
     user_details = (customer_username, customer_first_name, customer_last_name, customer_gender, customer_date_of_birth,
                     customer_phone_number, customer_email_address, home_address, loyalty_points)
     logins = (customer_username, customer_password)
@@ -438,4 +461,12 @@ def create_new_customer_account():
     mycursor.execute(f"INSERT INTO retail_store.customers VALUES {user_details};")
     db.commit()
     mycursor.execute(f"INSERT INTO retail_store.login_credentials VALUES {logins};")
+    db.commit()
+
+    # Insert action in actions recorder table
+    action = "newuser"
+    created_time = datetime.now()
+    sql_statement = f"INSERT INTO retail_store.actions_recorder (action_taken, description) " \
+                    f"VALUES ('{action}', '({customer_username}, {created_time})') "
+    mycursor.execute(sql_statement)
     db.commit()
